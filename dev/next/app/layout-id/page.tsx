@@ -1,106 +1,86 @@
-"use client"
-import { cancelFrame, frame, LayoutGroup, motion } from "motion/react"
-import { useEffect, useState } from "react"
+"use client";
 
-function NavigationItem({
-    title,
-    current,
-    onClick,
-    id,
-}: {
-    title: string
-    current?: boolean
-    onClick?: () => void
-    id: string
-}) {
-    return (
-        <div
-            style={{
-                position: "relative",
-                flex: 1,
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-            }}
-        >
-            {current && (
-                <motion.span
-                    id="current-indicator"
-                    layoutId="current-indicator"
-                    transition={{ duration: 2 }}
-                    style={{
-                        position: "absolute",
-                        inset: 0,
-                        backgroundColor: "#0ea5e9", // sky-500
-                    }}
-                />
-            )}
-            <button
-                id={id}
-                style={{
-                    position: "relative",
-                }}
-                onClick={onClick}
-            >
-                {title}
-            </button>
-        </div>
-    )
-}
+import { motion, AnimatePresence } from "motion/react";
+import { useState, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
-export default function Page() {
-    const [state, setState] = useState("a")
+export default function DebugLayoutTransition() {
+    const [leftCards, setLeftCards] = useState(["1", "2", "3", "4"]);
+    const [rightCards, setRightCards] = useState(["5", "6"]);
+    const [animatingCard, setAnimatingCard] = useState<string | null>(null);
 
-    useEffect(() => {
-        let prevLeft = 0
-        const check = frame.setup(() => {
-            const indicator = document.getElementById("current-indicator")
-            if (!indicator) return
+    const pendingMoveRef = useRef<string | null>(null);
 
-            const { left } = indicator.getBoundingClientRect()
+    useLayoutEffect(() => {
+        if (pendingMoveRef.current && animatingCard) {
+            const cardId = pendingMoveRef.current;
 
-            if (Math.abs(left - prevLeft) > 100) {
-                // console.log(prevLeft, left)
+            if (leftCards.includes(cardId)) {
+                // Move from left to right
+                setLeftCards(prev => prev.filter(id => id !== cardId));
+                setRightCards(prev => [...prev, cardId]);
+            } else if (rightCards.includes(cardId)) {
+                // Move from right to left
+                setRightCards(prev => prev.filter(id => id !== cardId));
+                setLeftCards(prev => [...prev, cardId]);
             }
 
-            prevLeft = left
-        }, true)
+            pendingMoveRef.current = null;
 
-        return () => cancelFrame(check)
-    }, [state])
+            // Clear animating card after animation completes
+            const timeoutId = setTimeout(() => {
+                setAnimatingCard(null);
+            }, 500); // Adjust based on your animation duration
 
-    return (
-        <nav
-            style={{
-                height: "3.5rem", // h-14
-                width: "400px",
-                backgroundColor: "#e2e8f0", // slate-200
-                maxWidth: "20rem", // max-w-xs
-                paddingLeft: "1rem", // px-4
-                paddingRight: "1rem",
-                paddingTop: "0.5rem", // py-2
-                paddingBottom: "0.5rem",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "0.75rem", // gap-x-3
+            return () => clearTimeout(timeoutId);
+        }
+    }, [animatingCard, leftCards, rightCards]);
+
+    const moveCard = (cardId: string) => {
+        pendingMoveRef.current = cardId;
+        setAnimatingCard(cardId);
+    };
+
+    const renderCard = (cardId: string, isAnimating: boolean = false) => (
+        <motion.div
+            key={cardId}
+            layoutId={cardId}
+            className={`
+                flex-none w-[200px] h-[200px] rounded-4xl bg-[#eee] cursor-pointer text-4xl flex items-center justify-center 
+                ${isAnimating && 'fixed z-50 pointer-events-none'
+                }`}
+            onClick={() => !isAnimating && moveCard(cardId)}
+            transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30
             }}
         >
-            <LayoutGroup id={state}>
-                <NavigationItem
-                    id="a"
-                    title="Home"
-                    current={state === "a"}
-                    onClick={() => setState("a")}
-                />
-                <NavigationItem
-                    id="b"
-                    title="Account"
-                    current={state === "b"}
-                    onClick={() => setState("b")}
-                />
-            </LayoutGroup>
-        </nav>
-    )
+            {cardId}
+        </motion.div>
+    );
+
+    return (
+        <>
+            <main className="flex flex-col gap-[32px] max-w-[600px] mx-auto my-[64px] box-content">
+                <div className="flex flex-col gap-[200px] justify-between w-full flex-wrap">
+                    <div className={`flex flex-row w-full gap-4 border border-red-500 overflow-x-auto overscroll-contain`}>
+                        {leftCards.map(cardId => renderCard(cardId))}
+                    </div>
+
+                    <div className={`flex flex-row w-full gap-4 border border-red-500 overflow-x-auto overscroll-contain`}>
+                        {rightCards.map(cardId => renderCard(cardId))}
+                    </div>
+                </div>
+            </main>
+
+            {/* Portal for animating card */}
+            {typeof window !== 'undefined' && animatingCard && createPortal(
+                <AnimatePresence>
+                    {renderCard(animatingCard, true)}
+                </AnimatePresence>,
+                document.body
+            )}
+        </>
+    );
 }
