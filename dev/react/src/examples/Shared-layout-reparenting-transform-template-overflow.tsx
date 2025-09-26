@@ -4,9 +4,6 @@ const Child = () => {
     return (
         <motion.div
             layoutId="big"
-            transformTemplate={(_, gen) =>
-                `translateX(-50%) translateY(-50%) ${gen}`
-            }
             style={{
                 width: "148px",
                 height: "148px",
@@ -23,7 +20,6 @@ const Child = () => {
                 style={{
                     width: "50px",
                     height: "50px",
-                    overflow: "clip",
                     borderRadius: "10px",
                     position: "absolute",
                     backgroundColor: "#0099ff",
@@ -40,9 +36,6 @@ const Sibling = () => {
         <>
             <motion.div
                 layoutId="big"
-                transformTemplate={(_, gen) =>
-                    `translateX(-50%) translateY(-50%) ${gen}`
-                }
                 style={{
                     width: "148px",
                     height: "148px",
@@ -59,7 +52,6 @@ const Sibling = () => {
                 style={{
                     width: "50px",
                     height: "50px",
-                    overflow: "clip",
                     borderRadius: "10px",
                     position: "absolute",
                     backgroundColor: "#85f",
@@ -77,12 +69,10 @@ export const App = () => {
     return (
         <div
             style={{
-                width: "200px",
-                height: "340px",
-                overflow: "clip",
+                width: "100%",
+                height: "100%",
+                position: "static",
                 backgroundColor: "#f3f3f3",
-                borderRadius: "20px",
-                position: "relative",
             }}
             onClick={() => toggleOn()}
         >
